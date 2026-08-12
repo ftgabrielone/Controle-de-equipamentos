@@ -933,28 +933,47 @@ function apagarUsuario() {
  * Recebe: { de: 'AAAA-MM-DD', ate: 'AAAA-MM-DD' }
  */
 function acaoAgenda(dados) {
-  var agenda = CalendarApp.getDefaultCalendar();
-  if (!agenda) return { ok: false, erro: 'semAgenda' };
-
   var de  = _dataDoTexto(dados.de,  -7);
   var ate = _dataDoTexto(dados.ate,  30);
   ate.setHours(23, 59, 59, 999);   // o último dia entra inteiro
 
-  var eventos = agenda.getEvents(de, ate).map(function (ev) {
-    return {
-      id:         ev.getId(),
-      titulo:     ev.getTitle(),
-      inicio:     ev.getStartTime().toISOString(),
-      fim:        ev.getEndTime().toISOString(),
-      local:      ev.getLocation() || '',
-      diaInteiro: ev.isAllDayEvent()
-    };
-  });
+  var eventos = [];
+  var fontes = [];
+
+  // Google: a agenda principal da conta que publicou o script
+  try {
+    var agenda = CalendarApp.getDefaultCalendar();
+    if (agenda) {
+      fontes.push('Google');
+      agenda.getEvents(de, ate).forEach(function (ev) {
+        eventos.push({
+          id:         ev.getId(),
+          titulo:     ev.getTitle(),
+          inicio:     ev.getStartTime().toISOString(),
+          fim:        ev.getEndTime().toISOString(),
+          local:      ev.getLocation() || '',
+          diaInteiro: ev.isAllDayEvent(),
+          origem:     'Google'
+        });
+      });
+    }
+  } catch (err) {
+    // sem agenda no Google não é motivo para derrubar a do iCloud
+  }
+
+  // iCloud: calendário publicado, lido por HTTPS (ver AgendaICloud.js)
+  try {
+    var doICloud = eventosDoICloud(de, ate);
+    if (doICloud.length || _urlICloud()) fontes.push('iCloud');
+    eventos = eventos.concat(doICloud);
+  } catch (err) {}
+
+  if (!fontes.length) return { ok: false, erro: 'semAgenda' };
 
   // mais próximos primeiro: é o que a pessoa procura no galpão
   eventos.sort(function (a, b) { return new Date(a.inicio) - new Date(b.inicio); });
 
-  return { ok: true, eventos: eventos };
+  return { ok: true, eventos: eventos, fontes: fontes };
 }
 
 /** Aceita 'AAAA-MM-DD'. Sem isso, cai em hoje mais o número de dias indicado. */

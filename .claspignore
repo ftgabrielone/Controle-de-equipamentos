@@ -1,4 +1,6 @@
-# fora da pasta do projeto, nada sobe
+# Fora da pasta apps-script nada sobe. Dentro dela, todo .js e o
+# appsscript.json vao. Nao liste arquivo por arquivo: quando um novo
+# aparecer, ele fica de fora sem ninguem perceber.
 **/**
+!*.js
 !appsscript.json
-!Código.js
