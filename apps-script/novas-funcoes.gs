@@ -10,7 +10,7 @@
  * novas; os dois últimos consertam problemas que encontrei lendo o v4.
  *
  *   PONTO 1  trocar uma linha no _doPost (limite de tamanho)
- *   PONTO 2  acrescentar 3 casos no switch do _doPost
+ *   PONTO 2  acrescentar 4 casos no switch do _doPost
  *   PONTO 3  colar as funções novas no fim do arquivo
  *   PONTO 4  substituir lerHistorico  (mostra a gravação no histórico)
  *   PONTO 5  substituir invSubstituir (conserta o acúmulo de abas Backup_)
@@ -51,7 +51,7 @@
    PONTO 2 — casos novos no switch do _doPost
    -------------------------------------------------------------------
    Dentro do switch (b.acao), depois do case 'historico', acrescente os
-   três casos abaixo. Eles ficam DEPOIS da linha
+   quatro casos abaixo. Eles ficam DEPOIS da linha
 
        var u = _autenticar(b.token);
 
@@ -76,6 +76,9 @@
       if (!sd) return _json({ ok: false, erro: 'naoEncontrada' });
       return _json({ ok: true, saida: sd });
     }
+
+    case 'equipamentosEmSaida':
+      return _json({ ok: true, emSaida: seriesEmSaidasAbertas() });
    =================================================================== */
 
 
@@ -163,6 +166,51 @@ function acaoEnviarRelatorio(dados, u) {
 
   _log(u, 'enviar-relatorio', para + ' · ' + nome);
   return { ok: true, restam: MailApp.getRemainingDailyQuota() };
+}
+
+/**
+ * EQUIPAMENTOS EM SAÍDA — quais séries estão presas a alguma saída ABERTA.
+ *
+ * É isto que faz o equipamento ficar vermelho no painel. Antes, o app só
+ * sabia da saída aberta no próprio aparelho: se outra equipe tinha levado
+ * o item, ele aparecia verde aqui e dava para levar o mesmo equipamento
+ * duas vezes. Agora a verdade vem da planilha, que enxerga todas.
+ *
+ * Saída fechada não entra, então encerrar uma saída devolve os itens para
+ * "na casa" sozinho, sem ninguém precisar marcar nada.
+ *
+ * Devolve: { ok:true, emSaida:[{serie, saida, projeto}] }
+ */
+function seriesEmSaidasAbertas() {
+  var sh = _abaSaidas();
+  var ultima = sh.getLastRow();
+  if (ultima < 2) return [];
+
+  var v = sh.getRange(2, 1, ultima - 1, COLS_SAIDA.length).getValues();
+  var colStatus = COLS_SAIDA.indexOf('status');
+  var colJson   = COLS_SAIDA.indexOf('json');
+
+  var vistos = {};
+  var lista = [];
+
+  for (var i = 0; i < v.length; i++) {
+    var id = String(v[i][0] || '').trim();
+    if (!id) continue;
+    if (String(v[i][colStatus] || '').trim().toLowerCase() === 'fechada') continue;
+
+    var s;
+    try { s = JSON.parse(v[i][colJson]); } catch (err) { continue; }
+    if (!s || !s.items) continue;
+
+    var projeto = (s.campos && (s.campos.projeto || s.campos.producao)) || '';
+    for (var j = 0; j < s.items.length; j++) {
+      var serie = String(s.items[j].serie || '').trim().toLowerCase();
+      if (!serie || vistos[serie]) continue;
+      vistos[serie] = true;
+      lista.push({ serie: serie, saida: id, projeto: String(projeto).slice(0, 60) });
+    }
+  }
+  return lista;
 }
 
 /**

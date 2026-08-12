@@ -455,6 +455,15 @@ button{background:none;border:none;cursor:pointer}
 .ag-hoje .ag-dia{border-color:var(--hot);background:var(--hot-dim)}
 .ag-hoje .ag-dia .d{color:var(--hot)}
 
+/* motivo real da falha, para ser lido e copiado */
+.caixa-erro{
+  margin-top:16px;padding:12px 14px;border-radius:10px;
+  background:var(--tally-dim);border:1px solid rgba(255,68,56,.32);
+  font-size:12.5px;line-height:1.6;color:#FFB3AC;
+  user-select:text;-webkit-user-select:text;word-break:break-word;
+}
+.caixa-erro b{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#FF9C94}
+
 .db-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .db-toolbar input{flex:1;min-width:200px;height:38px;padding:0 13px;border-radius:10px;background:var(--bg-2);border:1px solid var(--line)}
 .db-toolbar input:focus{outline:none;border-color:var(--hot);box-shadow:0 0 0 3px var(--hot-dim)}
@@ -475,6 +484,9 @@ button{background:none;border:none;cursor:pointer}
   animation:modalIn .38s var(--spring) both;
 }
 .modal.narrow{max-width:460px}
+.modal.largo{max-width:920px}
+.pdf-preview{width:100%;height:64dvh;border:none;display:block;background:#fff}
+.pdf-aviso{padding:14px 18px;font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--line-soft);line-height:1.6}
 @keyframes modalIn{from{opacity:0;transform:translateY(24px) scale(.965)}}
 .modal-h{padding:20px 24px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:flex-start;gap:14px}
 .modal-h h3{font-family:var(--f-display);font-size:19px;font-weight:800;letter-spacing:-.025em}
@@ -1298,7 +1310,8 @@ function go(v){
   el('vSub').textContent   = TITLES[v][1];
   el('scroll').scrollTop = 0;
   if(v === 'hist') carregarHistorico();
-  if(v === 'dash') renderDash();
+  if(v === 'dash'){ renderDash(); carregarEmSaida(); }
+  if(v === 'acervo') carregarEmSaida();
 }
 document.querySelectorAll('.navbtn[data-view]').forEach(b => b.onclick = () => go(b.dataset.view));
 
@@ -1396,17 +1409,61 @@ function autofillFromDB(){
   }
 }
 
-/* está nesta saída? */
+/* ------------------------------------------------------------
+   Em saída = está em QUALQUER saída aberta, não só na deste
+   aparelho. Sem isso, um equipamento que outra equipe levou
+   aparece verde aqui, e alguém leva o mesmo item duas vezes.
+   O servidor é quem sabe: a lista vem de lá e se junta ao que
+   ainda está na fila local, que ele ainda não recebeu.
+   ------------------------------------------------------------ */
+let emSaidaRemoto = new Map();   // série em minúscula -> { saida, projeto }
+let ultimaBuscaEmSaida = 0;
+
+const chaveSerie = s => String(s == null ? '' : s).trim().toLowerCase();
+
 function naSaida(serie){
-  const s = String(serie).trim().toLowerCase();
-  return items.some(it => String(it.serie).trim().toLowerCase() === s);
+  const s = chaveSerie(serie);
+  if(!s) return false;
+  if(items.some(it => chaveSerie(it.serie) === s)) return true;   // esta saída, agora
+  return emSaidaRemoto.has(s);                                    // qualquer outra aberta
 }
+
+// onde está: serve para o rótulo dizer com quem o equipamento saiu
+function ondeEsta(serie){
+  const s = chaveSerie(serie);
+  if(items.some(it => chaveSerie(it.serie) === s)) return { saida: saidaId, aqui: true };
+  return emSaidaRemoto.get(s) || null;
+}
+
+async function carregarEmSaida(forcar){
+  if(!urlValida(cloudURL) || !token) return;
+  const agora = Date.now();
+  if(!forcar && agora - ultimaBuscaEmSaida < 20000) return;   // não vale bater a cada tela
+  ultimaBuscaEmSaida = agora;
+  try{
+    const r = await api('equipamentosEmSaida');
+    if(!r || !r.ok) return;   // ação ainda não publicada: segue valendo só a saída local
+    const novo = new Map();
+    (r.emSaida || []).forEach(x => novo.set(chaveSerie(x.serie), x));
+    emSaidaRemoto = novo;
+    renderDB();
+  }catch(e){
+    // sem rede: o que já está em memória continua valendo
+  }
+}
+
+function rotuloDeSaida(serie){
+  const onde = ondeEsta(serie);
+  if(!onde) return 'em saída aberta';
+  return onde.aqui ? 'nesta saída' : ('saída ' + onde.saida + (onde.projeto ? ' · ' + onde.projeto : ''));
+}
+
 function situacao(d){
   if(naSaida(d.serie))        return 'out';
   if(d.estado === 'Avariado') return 'maintenance';
   return 'available';
 }
-const ROTULO = { out:'Nesta saída', maintenance:'Avariado', available:'Na casa' };
+const ROTULO = { out:'Em saída', maintenance:'Avariado', available:'Na casa' };
 
 function renderFilters(){
   const cats = [...new Set(db.map(d => d.categoria).filter(Boolean))].sort((a,b) => a.localeCompare(b,'pt-BR'));
@@ -1457,7 +1514,7 @@ function renderGrid(){
       '</div>' +
       '<div class="eq-foot">' +
         '<span class="pill ' + pillClass(d.estado) + '">' + d.estado + '</span>' +
-        '<span class="eq-val">' + (s === 'out' ? 'em uso agora' : 'toque para editar') + '</span>' +
+        '<span class="eq-val">' + escapeHtml(s === 'out' ? rotuloDeSaida(d.serie) : 'toque para editar') + '</span>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -2296,7 +2353,12 @@ function renderWall(){
   }
   alvo.innerHTML = db.map((d, i) => {
     const s = situacao(d);
-    const info = s === 'out' ? 'nesta saída agora' : (s === 'maintenance' ? 'avariado' : 'na casa · ' + d.estado);
+    const onde = s === 'out' ? ondeEsta(d.serie) : null;
+    const info = s === 'out'
+      ? (onde ? (onde.aqui ? 'nesta saída · ' + onde.saida
+                           : 'na saída ' + onde.saida + (onde.projeto ? ' · ' + onde.projeto : ''))
+              : 'em saída aberta')
+      : (s === 'maintenance' ? 'avariado' : 'na casa · ' + d.estado);
     const curta = String(d.serie).slice(-4);
     return '<div class="lamp" data-s="' + s + '" style="animation-delay:' + (i * 22) + 'ms" onclick="abrirEquip(\'' + jsAttr(d.serie) + '\')">' +
       '<span class="bulb"></span><span class="lbl">' + escapeHtml(curta) + '</span>' +
@@ -2320,6 +2382,19 @@ el('wall').addEventListener('mouseover', ev => {
   tip.style.marginLeft = Math.round(desloca) + 'px';
 });
 
+// quantas saídas abertas estão segurando equipamento agora
+function _resumoEmSaida(){
+  const codigos = new Set();
+  db.forEach(d => {
+    if(situacao(d) !== 'out') return;
+    const onde = ondeEsta(d.serie);
+    codigos.add(onde ? onde.saida : saidaId);
+  });
+  if(!codigos.size) return rented.length ? rented.length + ' alugado(s) nesta saída' : 'nada fora da casa';
+  if(codigos.size === 1) return 'na saída ' + [...codigos][0];
+  return 'em ' + codigos.size + ' saídas abertas';
+}
+
 function renderKpis(){
   const total     = db.length;
   const emSaida   = db.filter(d => situacao(d) === 'out').length;
@@ -2329,7 +2404,7 @@ function renderKpis(){
   const cards = [
     { k:'Itens no acervo', v:total,     s:(db.filter(d => d.categoria).length ? [...new Set(db.map(d => d.categoria).filter(Boolean))].length + ' categorias' : 'sem categorias'), c:'is-hot' },
     { k:'Na casa',         v:naCasa,    s:'prontos para sair', c:'is-ok' },
-    { k:'Nesta saída',     v:emSaida,   s:(rented.length ? '+ ' + rented.length + ' alugado(s)' : 'equipamentos da Whizz'), c:'is-tally' },
+    { k:'Em saída',        v:emSaida,   s:_resumoEmSaida(), c:'is-tally' },
     { k:'Avariados',       v:avariados, s:(avariados ? 'exigem manutenção' : 'nenhuma pendência'), c:(avariados ? 'is-warn' : '') }
   ];
   el('kpis').innerHTML = cards.map((m, i) =>
@@ -2427,6 +2502,68 @@ async function pdfEmBase64(node){
 }
 
 /* ------------------------------------------------------------
+   O termo é um só elemento na página, reaproveitado por todo
+   mundo. Sem esta trava, pedir o PDF de uma saída enquanto outro
+   ainda está sendo desenhado faz o segundo sobrescrever o
+   primeiro no meio do caminho — e sai o documento errado.
+   ------------------------------------------------------------ */
+let montandoTermo = false;
+
+async function comTermoMontado(dados, tarefa){
+  if(montandoTermo){
+    toast('Ainda estou montando o documento anterior. Espere terminar.', 'info');
+    return null;
+  }
+  montandoTermo = true;
+  try{
+    preencherTermo(dados);
+    return await tarefa();
+  }finally{
+    montandoTermo = false;
+  }
+}
+
+async function blobDoTermo(){
+  const pdf = await montarPDF(el('pdf-root'));
+  return pdf.output('blob');
+}
+
+/* ---- conferir antes de baixar ou mandar ---- */
+let nomePreview = 'termo.pdf';
+
+function abrirPreviewPDF(blob, nomeArquivo, titulo, sub, acoesExtra){
+  if(urlPreview) URL.revokeObjectURL(urlPreview);
+  urlPreview = URL.createObjectURL(blob);
+  nomePreview = nomeArquivo || 'termo.pdf';
+  modal(
+    cabecalho(escapeHtml(titulo), escapeHtml(sub)) +
+    '<div class="modal-b" style="padding:0">' +
+      '<iframe class="pdf-preview" src="' + urlPreview + '" title="Termo de saída"></iframe>' +
+      '<div class="pdf-aviso">Não apareceu nada acima? Alguns navegadores de celular não exibem PDF embutido. Use “Abrir em nova aba”.</div>' +
+    '</div>' +
+    '<div class="modal-f">' +
+      '<button class="btn btn-ghost" onclick="abrirPreviewEmAba()">Abrir em nova aba</button>' +
+      '<div style="flex:1"></div>' +
+      (acoesExtra || '') +
+      '<button class="btn btn-hot" onclick="baixarPreview()">Baixar PDF</button>' +
+    '</div>',
+    'largo'
+  );
+}
+
+function abrirPreviewEmAba(){
+  if(urlPreview) window.open(urlPreview, '_blank');
+}
+
+function baixarPreview(){
+  if(!urlPreview) return;
+  const a = document.createElement('a');
+  a.href = urlPreview;
+  a.download = nomePreview;
+  a.click();
+}
+
+/* ------------------------------------------------------------
    O termo é montado a partir de um objeto, não da tela. É isso
    que deixa o histórico regerar o mesmo documento de uma saída
    antiga, com o layout idêntico.
@@ -2513,20 +2650,19 @@ async function gerarPDF(){
   const erro = validarTermo(d);
   if(erro){ toast(erro, 'err'); go('saida'); return; }
 
-  preencherTermo(d);
-
   const btn = el('pdfBtn');
-  btn.textContent = 'Gerando…';
-  btn.disabled = true;
+  if(btn){ btn.textContent = 'Gerando…'; btn.disabled = true; }
   try{
-    await salvarElementoComoPDF(el('pdf-root'), nomeDoTermo(d));
-    toast('PDF gerado com sucesso.');
+    const blob = await comTermoMontado(d, blobDoTermo);
+    if(!blob) return;
+    abrirPreviewPDF(blob, nomeDoTermo(d),
+      'Termo da saída ' + saidaId,
+      (d.projeto || 'sem projeto') + ' · ' + (d.items.length + d.rented.length) + ' item(ns)');
   }catch(err){
     console.error(err);
-    toast('Erro ao gerar PDF. Tente novamente.', 'err');
+    toast('Erro ao gerar o PDF. Tente novamente.', 'err');
   }finally{
-    btn.textContent = 'Gerar PDF';
-    btn.disabled = false;
+    if(btn){ btn.textContent = 'Gerar PDF'; btn.disabled = false; }
   }
 }
 
@@ -2598,22 +2734,82 @@ async function derivarProva(pin, sal){
   return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
+/* ---------- erros que dizem o que houve ----------
+   Antes tudo virava "verifique a conexão": ação inexistente no Apps
+   Script, autorização do Gmail faltando, implantação fechada e queda de
+   rede davam a mesma frase. Sem distinguir isso não dá para consertar
+   nada olhando a tela.                                              */
+const MSG_ERRO = {
+  'rede':          'Sem conexão com o servidor.',
+  'sem-nuvem':     'Configure o endereço da nuvem primeiro.',
+  'naoJson':       'O endereço da nuvem respondeu uma página em vez de dados. Confira se a implantação está publicada para "Qualquer pessoa" e se o link termina em /exec.',
+  'acao':          'O Apps Script não conhece essa ação. Falta aplicar o patch e reimplantar em Implantar → Gerenciar implantações → Nova versão.',
+  'servidor':      'O Apps Script quebrou ao executar. Normalmente é autorização faltando: rode conferirAgendaEEmail() no editor e autorize a Agenda e o Gmail.',
+  'permissao':     'Só o administrador pode fazer isso.',
+  'grande':        'O envio ficou grande demais para o Apps Script.',
+  'naoEncontrada': 'Essa saída não está mais guardada na planilha.',
+  'emailInvalido': 'O servidor não aceitou o endereço de email.',
+  'semAnexo':      'O PDF não chegou ao servidor.',
+  'anexoInvalido': 'O servidor não conseguiu remontar o PDF.',
+  'falhaEnvio':    'O Gmail recusou o envio.',
+  'cota':          'A conta do Google atingiu o limite diário de emails.',
+  'semAgenda':     'A conta não tem uma agenda principal acessível.',
+  'id':            'Código de saída inválido.',
+  'lista':         'O servidor esperava uma lista de equipamentos.',
+  'json':          'O servidor não entendeu o pedido.',
+  'auth':          'Sua sessão expirou.'
+};
+
+function erroComCodigo(codigo, detalhe){
+  const e = new Error(codigo);
+  e.codigo = codigo;
+  e.detalhe = detalhe || '';
+  return e;
+}
+
+// resposta que voltou com ok:false vira um erro carregando o motivo do servidor
+function falhaDaResposta(r){
+  return erroComCodigo((r && r.erro) || 'resposta', (r && r.detalhe) || '');
+}
+
+function textoDoErro(e){
+  const codigo = (e && e.codigo) || (e && e.message) || 'resposta';
+  let txt = MSG_ERRO[codigo] || ('Falha inesperada do servidor (' + codigo + ').');
+  if(e && e.detalhe) txt += ' [' + e.detalhe + ']';
+  return txt;
+}
+
 /* ---------- camada única de comunicação ---------- */
 async function api(acao, dados){
-  if(!urlValida(cloudURL)) throw new Error('sem-nuvem');
+  if(!urlValida(cloudURL)) throw erroComCodigo('sem-nuvem');
   const corpo = Object.assign({ acao }, dados || {});
   if(token) corpo.token = token;
 
-  const resp = await fetch(cloudURL, {
-    method: 'POST',
-    headers: { 'Content-Type':'text/plain;charset=utf-8' },
-    body: JSON.stringify(corpo)
-  });
-  const data = await resp.json();
+  let resp, bruto;
+  try{
+    resp = await fetch(cloudURL, {
+      method: 'POST',
+      headers: { 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(corpo)
+    });
+    bruto = await resp.text();
+  }catch(err){
+    throw erroComCodigo('rede', String((err && err.message) || err).slice(0, 120));
+  }
+
+  let data;
+  try{
+    data = JSON.parse(bruto);
+  }catch(err){
+    // Apps Script devolveu HTML. Quase sempre a implantação exige login.
+    throw erroComCodigo('naoJson', /accounts\.google\.com|Sign in|Fazer login|<!DOCTYPE/i.test(bruto)
+      ? 'veio uma página de login do Google'
+      : 'HTTP ' + (resp.status || '?') + ': ' + bruto.slice(0, 60).replace(/\s+/g, ' '));
+  }
 
   if(data && data.erro === 'auth'){
     encerrarSessao(true);
-    throw new Error('auth');
+    throw erroComCodigo('auth');
   }
   return data;
 }
@@ -2800,6 +2996,7 @@ function salvarNuvemLogin(){
 
 function iniciarDepoisDoLogin(){
   carregarNuvem(false);
+  carregarEmSaida(true);
   if(!syncLigado) ligarSync();
 }
 
@@ -2972,6 +3169,7 @@ async function fecharSaida(){
     if(!data || !data.ok) throw new Error('resposta');
     toast('Saída ' + saidaId + ' fechada e guardada no histórico.');
     novaSaida();
+    carregarEmSaida(true);   // os itens dela voltam a ficar verdes
   }catch(e){
     toast('Não consegui fechar agora. Verifique a conexão e tente de novo.', 'err');
   }
@@ -3066,16 +3264,14 @@ async function abrirAgenda(){
   const dia = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
   try{
     const r = await api('agenda', { de: dia(-7), ate: dia(30) });
-    if(!r || !r.ok) throw new Error(r && r.erro ? r.erro : 'resposta');
+    if(!r || !r.ok) throw falhaDaResposta(r);
     agendaCache = r.eventos || [];
     renderListaAgenda();
   }catch(e){
     const alvo = el('agendaLista');
     if(!alvo) return;   // a pessoa fechou o modal enquanto carregava
-    alvo.innerHTML = '<div class="empty"><div class="big">Não consegui ler a agenda</div>' +
-      (e.message === 'semAgenda'
-        ? 'O Apps Script ainda não tem a função da agenda publicada.'
-        : 'Verifique a conexão e se o Apps Script foi reimplantado depois da atualização.') + '</div>';
+    alvo.innerHTML = '<div class="empty" style="padding:24px"><div class="big">Não consegui ler a agenda</div></div>' +
+      '<div class="caixa-erro"><b>' + escapeHtml((e && e.codigo) || 'falha') + '</b><br>' + escapeHtml(textoDoErro(e)) + '</div>';
   }
 }
 
@@ -3174,36 +3370,51 @@ async function carregarHistorico(){
           '<td class="qty">' + s.itens + '</td>' +
           '<td><span class="tag ' + (s.status === 'fechada' ? 't-available' : 't-out') + '"><i></i>' + (s.status === 'fechada' ? 'Fechada' : 'Aberta') + '</span></td>' +
           '<td style="text-align:right;white-space:nowrap">' +
-            '<button class="btn btn-ghost btn-sm" onclick="baixarTermoDoHistorico(' + i + ')">PDF</button> ' +
+            '<button class="btn btn-ghost btn-sm" onclick="verTermoDoHistorico(' + i + ')">PDF</button> ' +
             '<button class="btn btn-hot btn-sm" onclick="abrirEnvio(' + i + ')">Enviar</button>' +
           '</td>' +
         '</tr>').join('') + '</tbody>';
   }catch(e){
-    alvo.innerHTML = '<tbody><tr><td><div class="empty"><div class="big">Não consegui carregar</div>Verifique a conexão e tente de novo.</div></td></tr></tbody>';
+    alvo.innerHTML = '<tbody><tr><td><div class="empty" style="padding:24px"><div class="big">Não consegui carregar o histórico</div></div>' +
+      '<div class="caixa-erro" style="margin:0 18px 18px"><b>' + escapeHtml((e && e.codigo) || 'falha') + '</b><br>' +
+      escapeHtml(textoDoErro(e)) + '</div></td></tr></tbody>';
   }
 }
 
 /* ---- rebuscar uma saída inteira para remontar o termo ---- */
 async function buscarSaidaCompleta(id){
   const r = await api('saidaDetalhe', { id });
-  if(!r || !r.ok || !r.saida) throw new Error(r && r.erro ? r.erro : 'resposta');
+  if(!r || !r.ok || !r.saida) throw falhaDaResposta(r);
   return r.saida;
 }
 
-async function baixarTermoDoHistorico(i){
+async function verTermoDoHistorico(i){
   const linha = histCache[i];
   if(!linha) return;
   toast('Remontando o termo da saída ' + linha.id + '…', 'info');
   try{
     const d = dadosDaSaida(await buscarSaidaCompleta(linha.id));
-    preencherTermo(d);
-    await salvarElementoComoPDF(el('pdf-root'), nomeDoTermo(d));
-    toast('PDF da saída ' + linha.id + ' gerado.');
+    const blob = await comTermoMontado(d, blobDoTermo);
+    if(!blob) return;
+    // o cabeçalho mostra código e contagem: dá para conferir que é a saída certa
+    abrirPreviewPDF(blob, nomeDoTermo(d),
+      'Termo da saída ' + linha.id,
+      (d.projeto || 'sem projeto') + ' · ' + (d.items.length + d.rented.length) + ' item(ns)',
+      '<button class="btn btn-ghost" onclick="abrirEnvio(' + i + ')">Enviar por email</button>');
   }catch(e){
-    toast(e.message === 'naoEncontrada'
-      ? 'Essa saída não está mais guardada na planilha.'
-      : 'Não consegui remontar o termo dessa saída.', 'err');
+    mostrarFalhaEmModal('Não consegui remontar o termo da saída ' + linha.id, e);
   }
+}
+
+// falha que precisa ser lida com calma, quando não há um modal aberto para aproveitar
+function mostrarFalhaEmModal(titulo, e){
+  modal(
+    cabecalho(escapeHtml(titulo), 'O servidor respondeu com um código de erro.') +
+    '<div class="modal-b"><div class="caixa-erro" style="margin:0"><b>' +
+      escapeHtml((e && e.codigo) || 'falha') + '</b><br>' + escapeHtml(textoDoErro(e)) +
+    '</div></div>' +
+    '<div class="modal-f"><button class="btn btn-hot" onclick="fecharModal()">Entendi</button></div>'
+  );
 }
 
 /* ---- enviar o termo por email, com o PDF anexado ---- */
@@ -3235,6 +3446,7 @@ function abrirEnvio(i){
       '<label style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink-2);font-family:var(--f-body)">' +
         '<input type="checkbox" id="env-padrao" style="width:auto;height:auto;margin:0" ' + (emailPadrao() ? 'checked' : '') + '> Guardar este endereço como padrão' +
       '</label>' +
+      '<div class="caixa-erro" id="env-erro" style="display:none"></div>' +
     '</div>' +
     '<div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>' +
       '<button class="btn btn-hot" id="env-btn" onclick="confirmarEnvio(' + i + ')">Enviar</button></div>'
@@ -3262,16 +3474,21 @@ async function confirmarEnvio(i){
       nomeArquivo: nomeDoTermo(d),
       pdf: anexo
     });
-    if(!r || !r.ok) throw new Error(r && r.erro ? r.erro : 'resposta');
+    if(!r || !r.ok) throw falhaDaResposta(r);
     if(guardar) salvarEmailPadrao(para);
     fecharModal();
     toast('Relatório enviado para ' + para + '.');
   }catch(e){
     const btnAtual = el('env-btn');
     if(btnAtual){ btnAtual.textContent = 'Enviar'; btnAtual.disabled = false; }
-    toast(e.message === 'cota'
-      ? 'A conta do Google atingiu o limite diário de emails.'
-      : 'Não consegui enviar agora. Verifique a conexão e tente de novo.', 'err');
+    // dentro do modal, para não apagar o que a pessoa digitou
+    const caixa = el('env-erro');
+    if(caixa){
+      caixa.style.display = '';
+      caixa.innerHTML = '<b>' + escapeHtml((e && e.codigo) || 'falha') + '</b><br>' + escapeHtml(textoDoErro(e));
+    } else {
+      toast(textoDoErro(e), 'err');
+    }
   }
 }
 
@@ -3279,9 +3496,16 @@ async function confirmarEnvio(i){
    17. MODAL GENÉRICO
    ============================================================ */
 const scrim = el('scrim');
-function fecharModal(){ scrim.classList.remove('on'); scrim.innerHTML = ''; }
-function modal(html){
-  scrim.innerHTML = '<div class="modal">' + html + '</div>';
+let urlPreview = null;
+
+function fecharModal(){
+  scrim.classList.remove('on');
+  scrim.innerHTML = '';
+  // o blob do PDF fica na memória até ser solto
+  if(urlPreview){ URL.revokeObjectURL(urlPreview); urlPreview = null; }
+}
+function modal(html, tamanho){
+  scrim.innerHTML = '<div class="modal ' + (tamanho || '') + '">' + html + '</div>';
   scrim.classList.add('on');
   const primeiro = scrim.querySelector('input,select,textarea');
   if(primeiro) setTimeout(() => primeiro.focus(), 120);
