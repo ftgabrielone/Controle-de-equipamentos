@@ -1,7 +1,7 @@
 /* Whizz Vídeo — service worker
    Guarda o app para abrir offline. Troque a VERSAO a cada atualização
    para que todos os aparelhos peguem a versão nova. */
-const VERSAO = 'whizz-v1';
+const VERSAO = 'whizz-v2';
 const ESSENCIAIS = [
   './',
   './index.html',
@@ -14,7 +14,8 @@ const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+  'https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap'
 ];
 
 self.addEventListener('install', ev => {
@@ -51,7 +52,8 @@ self.addEventListener('fetch', ev => {
     }
     try {
       const rede = await fetch(req);
-      if (rede && rede.ok && req.url.startsWith(self.location.origin)) {
+      // guarda o que deu certo: o app, as bibliotecas do CDN e os arquivos de fonte
+      if (rede && rede.ok && rede.type !== 'opaque') {
         const c = await caches.open(VERSAO);
         c.put(req, rede.clone());
       }
