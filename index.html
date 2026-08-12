@@ -422,6 +422,39 @@ button{background:none;border:none;cursor:pointer}
 .cloud-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
 .cloud-row > div:first-child{flex:1;min-width:260px}
 
+/* vínculo com a gravação na agenda */
+.agenda-box{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+}
+.agenda-box.on{border-color:rgba(255,165,60,.4);background:var(--hot-dim)}
+.agenda-ico{display:grid;place-items:center;color:var(--ink-3);flex:none}
+.agenda-box.on .agenda-ico{color:var(--hot)}
+.agenda-ico svg{width:17px;height:17px;stroke-width:1.7}
+.agenda-txt{flex:1;min-width:0;font-size:13px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis}
+.agenda-box.on .agenda-txt{color:var(--ink);font-weight:600}
+.agenda-txt small{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);font-weight:400;margin-top:1px}
+
+/* lista de eventos da agenda dentro do modal */
+.ag-lista{border:1px solid var(--line);border-radius:12px;background:var(--bg-2);max-height:340px;overflow-y:auto}
+.ag-item{
+  display:flex;align-items:flex-start;gap:12px;padding:12px 14px;width:100%;text-align:left;
+  border-bottom:1px solid var(--line-soft);transition:background .16s;
+}
+.ag-item:last-child{border-bottom:none}
+.ag-item:hover{background:var(--surface)}
+.ag-dia{
+  flex:none;width:44px;text-align:center;border-radius:8px;padding:5px 0;
+  background:var(--surface-2);border:1px solid var(--line);
+}
+.ag-dia .d{display:block;font-family:var(--f-display);font-size:16px;font-weight:800;line-height:1}
+.ag-dia .m{display:block;font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--ink-3);letter-spacing:.08em;margin-top:2px}
+.ag-info{min-width:0;flex:1}
+.ag-info .t{display:block;font-size:13.5px;font-weight:600;line-height:1.3}
+.ag-info .s{display:block;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:3px;line-height:1.4}
+.ag-hoje .ag-dia{border-color:var(--hot);background:var(--hot-dim)}
+.ag-hoje .ag-dia .d{color:var(--hot)}
+
 .db-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .db-toolbar input{flex:1;min-width:200px;height:38px;padding:0 13px;border-radius:10px;background:var(--bg-2);border:1px solid var(--line)}
 .db-toolbar input:focus{outline:none;border-color:var(--hot);box-shadow:0 0 0 3px var(--hot-dim)}
@@ -453,8 +486,10 @@ button{background:none;border:none;cursor:pointer}
 .x svg{width:17px;height:17px;stroke-width:2}
 
 /* leitor de etiqueta */
-#scanReader{border-radius:12px;overflow:hidden;background:#05070A;min-height:40px;margin-bottom:12px;border:1px solid var(--line)}
-#scanReader video{width:100%!important}
+#scanReader{border-radius:12px;overflow:hidden;background:#05070A;min-height:40px;margin-bottom:12px;border:1px solid var(--line);position:relative}
+#scanReader video{width:100%!important;height:auto;display:block;max-height:56dvh;object-fit:cover}
+.scan-modo{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+.scan-modo:not(:empty)::before{content:'via '}
 #scanReader img{filter:invert(1)}
 .scan-msg{min-height:22px;font-size:13px;font-weight:600;margin:10px 0}
 .scan-msg.ok{color:var(--ok)}
@@ -592,6 +627,9 @@ button{background:none;border:none;cursor:pointer}
   .toast{max-width:none}
   .fab{display:flex;bottom:78px;right:16px}
   .actionbar{position:static}
+  /* o texto da gravação ocupa a linha toda e os botões descem */
+  .agenda-txt{flex:1 0 calc(100% - 28px)}
+  .agenda-box .btn{flex:1}
   input,select,textarea{font-size:16px!important} /* evita o zoom automático do iOS */
   .cloud-row > div:first-child{min-width:100%}
 }
@@ -620,6 +658,11 @@ button{background:none;border:none;cursor:pointer}
   font-size:18px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
   color:#6E7000;margin:0 0 26px 0;
 }
+.pdf-page .doc-agenda{
+  font-size:12px;color:#6B6B5E;margin:-18px 0 24px 0;padding-left:10px;
+  border-left:3px solid #B8860B;line-height:1.5;
+}
+.pdf-page .doc-agenda b{color:#2B2B24;font-weight:600}
 .pdf-page .info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 30px;margin-bottom:28px}
 .pdf-page .info-item .k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6B6B5E;margin-bottom:3px}
 .pdf-page .info-item .v{font-size:14px;font-weight:600;color:#2B2B24}
@@ -777,6 +820,19 @@ button{background:none;border:none;cursor:pointer}
           <div class="card f" style="margin-bottom:0">
             <div class="card-h"><h3>Dados da retirada</h3></div>
             <div class="card-b">
+              <div class="frow one">
+                <div>
+                  <label>Gravação na agenda</label>
+                  <div class="agenda-box" id="agendaBox">
+                    <span class="agenda-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+                    <span class="agenda-txt" id="agendaLabel">Nenhuma gravação vinculada</span>
+                    <button class="btn btn-ghost btn-sm" onclick="abrirAgenda()">Escolher</button>
+                    <button class="btn btn-quiet btn-sm" id="agendaLimpar" onclick="limparAgenda()" style="display:none">Desvincular</button>
+                  </div>
+                  <div class="hint">Vincular a gravação faz o histórico registrar de qual compromisso esse equipamento saiu.</div>
+                  <input type="hidden" id="agendaId"><input type="hidden" id="agendaTitulo"><input type="hidden" id="agendaInicio">
+                </div>
+              </div>
               <div class="frow one"><div><label for="producao">Produção</label><input type="text" id="producao" placeholder="Ex: Institucional 2026"></div></div>
               <div class="frow one"><div><label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="Ex: Empresa X"></div></div>
               <div class="frow one"><div><label for="projeto">Projeto</label><input type="text" id="projeto" placeholder="Ex: Campanha Verão"></div></div>
@@ -880,7 +936,14 @@ button{background:none;border:none;cursor:pointer}
               <div><button class="btn btn-ghost" onclick="carregarNuvem(true)">Carregar da nuvem</button></div>
               <div><button class="btn btn-ghost" onclick="salvarNuvem(true)">Salvar na nuvem</button></div>
             </div>
-            <div class="hint">Depois de conectado, tudo sincroniza automaticamente e o banco fica visível na sua planilha no Google Drive.</div>
+            <div class="hint">Depois de conectado, tudo sincroniza automaticamente e o banco fica visível na sua planilha no Google Drive. A agenda e o envio de relatórios usam este mesmo link.</div>
+            <div class="frow one" style="margin:16px 0 0">
+              <div>
+                <label for="emailPadrao">Email padrão para os relatórios</label>
+                <input type="email" id="emailPadrao" placeholder="financeiro@whizzvideo.com.br" onchange="salvarEmailPadrao(this.value.trim())">
+                <div class="hint">Já vem preenchido quando você envia um relatório pelo histórico — dá para trocar na hora do envio.</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -973,7 +1036,7 @@ button{background:none;border:none;cursor:pointer}
       </div>
 
       <div class="foot-row">
-        <span class="tally-txt"><span id="scanTally">0</span> equipamentos nesta saída</span>
+        <span class="tally-txt"><span id="scanTally">0</span> equipamentos nesta saída<span class="scan-modo" id="scanModo"></span></span>
         <button class="btn btn-ghost btn-sm" onclick="fecharScanner()">Concluir</button>
       </div>
     </div>
@@ -1015,6 +1078,7 @@ button{background:none;border:none;cursor:pointer}
     <div class="doc-meta"><div id="pdfGeradoEm"></div></div>
   </div>
   <div class="doc-title">Controle de Saída de Equipamentos</div>
+  <div class="doc-agenda" id="pdfAgenda" style="display:none;">Gravação na agenda: <b id="pdfAgendaTexto">—</b></div>
 
   <div class="info-grid">
     <div class="info-item"><div class="k">Produção</div><div class="v" id="pdfProducao">—</div></div>
@@ -1106,9 +1170,11 @@ const CLOUD_KEY = 'whizzCloudURL_v1';
 const TOKEN_KEY = 'whizzToken_v1';
 const USER_KEY  = 'whizzUsuario_v1';
 const SAIDA_KEY = 'whizzSaidaId_v1';
+const EMAIL_KEY = 'whizzEmailRelatorio_v1';
 
 const ESTADOS = ['Ótimo','Bom','Regular','Avariado'];
 let ui = { view:'dash', cat:'Todos', q:'' };
+let histCache = [];   // últimas saídas carregadas, para o PDF e o envio por email
 
 const $ = s => document.querySelector(s);
 const el = id => document.getElementById(id);
@@ -1633,13 +1699,41 @@ function agendarSyncNuvem(){
 /* ============================================================
    9. LEITOR DE ETIQUETA
    ============================================================ */
-let scanner = null;
+let scanner = null;            // html5-qrcode: o leitor de reserva
 let ultimoCodigo = '';
 let ultimoCodigoTs = 0;
 let lenteEscolhida = '';
 try{ lenteEscolhida = localStorage.getItem('whizzLente') || ''; }catch(e){}
 let temZoom = false;
 let lanternaOn = false;
+
+/* ---- leitor do próprio aparelho (BarcodeDetector) ----
+   É o mesmo motor que o sistema usa na câmera nativa: acelerado por
+   hardware e, o que mais importa aqui, varre o QUADRO INTEIRO. O
+   leitor de reserva só decodifica dentro de uma janela recortada, e
+   era justamente esse recorte que impedia a leitura de QR.
+   Existe no Chrome do Android; o Safari do iPhone ainda não tem, e
+   nesses aparelhos o de reserva assume.                              */
+let detector = null;
+let videoNativo = null;
+let streamNativo = null;
+let loopNativo = null;
+let modoLeitura = '';          // 'nativo' | 'reserva' | ''
+
+const FORMATOS_DESEJADOS = ['qr_code','code_128','code_39','ean_13','ean_8',
+                            'itf','upc_a','upc_e','codabar','data_matrix'];
+
+function temDetectorNativo(){
+  return typeof window.BarcodeDetector === 'function';
+}
+
+function mostrarModoLeitura(){
+  const alvo = el('scanModo');
+  if(!alvo) return;
+  alvo.textContent = modoLeitura === 'nativo' ? 'leitor do aparelho'
+                   : modoLeitura === 'reserva' ? 'leitor de reserva'
+                   : '';
+}
 
 function abrirScanner(){
   if(db.length === 0){
@@ -1656,9 +1750,8 @@ function abrirScanner(){
   iniciarCamera();
 }
 
-function iniciarCamera(){
+async function iniciarCamera(){
   const area = el('scanReader');
-  if(typeof Html5Qrcode === 'undefined'){ area.style.display = 'none'; return; }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     area.style.display = 'none';
     mostrarScanMsg('Este navegador não abre a câmera. Use a foto ou digite o número.', false);
@@ -1667,6 +1760,23 @@ function iniciarCamera(){
   area.style.display = '';
   mostrarScanMsg('Pedindo acesso à câmera…', true);
 
+  if(temDetectorNativo()){
+    try{
+      await iniciarLeitorNativo();
+      return;
+    }catch(err){
+      pararLeitorNativo();
+      // permissão negada é assunto encerrado: trocar de leitor não resolve
+      if(/NotAllowed|Permission|Denied/i.test(String((err && err.name) || err))){ erroCamera(err); return; }
+      console.warn('leitor do aparelho indisponível, indo para o de reserva:', err);
+    }
+  }
+
+  if(typeof Html5Qrcode === 'undefined'){
+    area.style.display = 'none';
+    mostrarScanMsg('Não consegui carregar o leitor. Verifique a internet ou digite o número.', false);
+    return;
+  }
   // pedido simples primeiro: é o único que o Safari aceita para mostrar a permissão
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
     .then(stream => {
@@ -1674,6 +1784,69 @@ function iniciarCamera(){
       return tentarLeitor(0);
     })
     .catch(erroCamera);
+}
+
+async function iniciarLeitorNativo(){
+  const suportados = await BarcodeDetector.getSupportedFormats();
+  const formats = FORMATOS_DESEJADOS.filter(f => suportados.indexOf(f) >= 0);
+  if(!formats.length) throw new Error('semFormatos');
+  detector = new BarcodeDetector({ formats });
+
+  const video = lenteEscolhida
+    ? { deviceId: { exact: lenteEscolhida }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    : { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
+  streamNativo = await navigator.mediaDevices.getUserMedia({ video });
+
+  videoNativo = document.createElement('video');
+  videoNativo.setAttribute('playsinline', '');   // sem isto o iPhone joga o vídeo em tela cheia
+  videoNativo.muted = true;
+  videoNativo.srcObject = streamNativo;
+
+  const area = el('scanReader');
+  area.innerHTML = '';
+  area.appendChild(videoNativo);
+  await videoNativo.play();
+
+  modoLeitura = 'nativo';
+  mostrarModoLeitura();
+  mostrarScanMsg('Aponte para a etiqueta — QR ou código de barras.', true);
+  prepararControlesCamera();
+  varrerQuadro();
+}
+
+async function varrerQuadro(){
+  if(modoLeitura !== 'nativo' || !detector || !videoNativo) return;
+  try{
+    const achados = await detector.detect(videoNativo);
+    if(achados && achados.length){
+      // com mais de um código na frente da câmera, vale o mais próximo do centro
+      const meio = (videoNativo.videoWidth || 0) / 2;
+      const centro = c => (c.boundingBox ? c.boundingBox.x + c.boundingBox.width / 2 : 0);
+      achados.sort((a, b) => Math.abs(centro(a) - meio) - Math.abs(centro(b) - meio));
+      const lido = String(achados[0].rawValue || '').trim();
+      if(lido) processarCodigo(lido, true);
+    }
+  }catch(e){
+    // quadro ruim (foco, luz): não é erro, tenta no próximo
+  }
+  if(modoLeitura === 'nativo') loopNativo = setTimeout(varrerQuadro, 90);
+}
+
+function pararLeitorNativo(){
+  modoLeitura = '';
+  clearTimeout(loopNativo);
+  loopNativo = null;
+  detector = null;
+  if(videoNativo){
+    try{ videoNativo.pause(); }catch(e){}
+    videoNativo.srcObject = null;
+    videoNativo = null;
+  }
+  if(streamNativo){
+    streamNativo.getTracks().forEach(t => { try{ t.stop(); }catch(e){} });
+    streamNativo = null;
+  }
+  mostrarModoLeitura();
 }
 
 function formatosLeitura(){
@@ -1708,16 +1881,24 @@ function tentarLeitor(n){
     verbose: false
   });
 
-  // faixa larga e baixa: o recorte cai em cima do código de barras
+  // A janela precisa servir aos dois formatos: larga para o código de
+  // barras e alta o bastante para um QR, que é quadrado. A versão antiga
+  // usava 40% da altura — um QR só caberia tão longe que ficava pequeno
+  // demais para decodificar, e por isso nunca lia.
+  // Sem aspectRatio fixo: o vídeo fica na proporção nativa do sensor.
   const conf = {
     fps: 12,
-    qrbox: (w, h) => ({ width: Math.floor(w * 0.95), height: Math.floor(h * 0.40) }),
-    aspectRatio: 1.0
+    qrbox: (w, h) => ({
+      width:  Math.floor(w * 0.92),
+      height: Math.floor(Math.min(w, h) * 0.78)
+    })
   };
 
   return scanner.start(opcoes[n], conf, codigo => processarCodigo(codigo, true), () => {})
     .then(() => {
-      mostrarScanMsg('Aponte para a etiqueta.', true);
+      modoLeitura = 'reserva';
+      mostrarModoLeitura();
+      mostrarScanMsg('Aponte para a etiqueta — QR ou código de barras.', true);
       prepararControlesCamera();
     })
     .catch(err => {
@@ -1730,6 +1911,8 @@ function tentarLeitor(n){
 
 function erroCamera(err){
   scanner = null;
+  modoLeitura = '';
+  mostrarModoLeitura();
   el('scanReader').style.display = 'none';
   const nome = err ? String(err.name || err.message || err) : '';
   if(/NotAllowed|Permission|Denied/i.test(nome)){
@@ -1741,12 +1924,38 @@ function erroCamera(err){
   }
 }
 
+/* ---- lente, zoom e lanterna valem para os dois leitores ---- */
+function trilhaAtual(){
+  if(streamNativo){
+    const t = streamNativo.getVideoTracks();
+    if(t && t.length) return t[0];
+  }
+  return null;
+}
+
+function capacidadesCamera(){
+  const t = trilhaAtual();
+  if(t && t.getCapabilities){ try{ return t.getCapabilities() || {}; }catch(e){ return {}; } }
+  if(scanner){ try{ return scanner.getRunningTrackCapabilities() || {}; }catch(e){ return {}; } }
+  return {};
+}
+
+function aplicarNaCamera(constraints){
+  const t = trilhaAtual();
+  if(t) return t.applyConstraints(constraints);
+  if(scanner) return scanner.applyVideoConstraints(constraints);
+  return Promise.reject(new Error('semCamera'));
+}
+
+// enumerateDevices é padrão e não depende de biblioteca nenhuma
 function listarLentes(){
-  if(typeof Html5Qrcode === 'undefined' || !Html5Qrcode.getCameras) return;
-  Html5Qrcode.getCameras().then(cams => {
-    if(!cams || cams.length < 2) return;
-    el('lenteSel').innerHTML = cams.map(c =>
-      '<option value="' + escapeAttr(c.id) + '"' + (lenteEscolhida === c.id ? ' selected' : '') + '>' + escapeHtml(c.label || 'Câmera') + '</option>'
+  if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  navigator.mediaDevices.enumerateDevices().then(lista => {
+    const cams = lista.filter(d => d.kind === 'videoinput');
+    if(cams.length < 2) return;
+    el('lenteSel').innerHTML = cams.map((c, i) =>
+      '<option value="' + escapeAttr(c.deviceId) + '"' + (lenteEscolhida === c.deviceId ? ' selected' : '') + '>' +
+      escapeHtml(c.label || ('Câmera ' + (i + 1))) + '</option>'
     ).join('');
     el('lenteBox').style.display = '';
   }).catch(() => {});
@@ -1755,15 +1964,30 @@ function listarLentes(){
 function trocarLente(){
   lenteEscolhida = el('lenteSel').value;
   try{ localStorage.setItem('whizzLente', lenteEscolhida); }catch(e){}
-  if(scanner){
-    scanner.stop().then(() => { scanner.clear(); scanner = null; tentarLeitor(0); }).catch(() => { scanner = null; tentarLeitor(0); });
+  reiniciarLeitor();
+}
+
+function reiniciarLeitor(){
+  lanternaOn = false;
+  temZoom = false;
+  el('btnLanterna').style.display = 'none';
+  el('zoomBox').style.display = 'none';
+  if(modoLeitura === 'nativo'){
+    pararLeitorNativo();
+    iniciarCamera();
+    return;
   }
+  if(scanner){
+    const recomecar = () => { scanner = null; iniciarCamera(); };
+    scanner.stop().then(() => { try{ scanner.clear(); }catch(e){} recomecar(); }).catch(recomecar);
+    return;
+  }
+  iniciarCamera();
 }
 
 function prepararControlesCamera(){
   listarLentes();
-  let caps = {};
-  try{ caps = scanner.getRunningTrackCapabilities() || {}; }catch(e){ caps = {}; }
+  const caps = capacidadesCamera();
 
   if(caps.torch) el('btnLanterna').style.display = '';
   if(caps.zoom){
@@ -1778,28 +2002,50 @@ function prepararControlesCamera(){
 }
 
 function aplicarZoom(v){
-  if(!scanner || !temZoom) return;
+  if(!temZoom) return;
   el('zoomVal').textContent = '(' + Number(v).toFixed(1) + 'x)';
-  try{ scanner.applyVideoConstraints({ advanced: [{ zoom: Number(v) }] }); }catch(e){}
+  aplicarNaCamera({ advanced: [{ zoom: Number(v) }] }).catch(() => {});
 }
 
 function alternarLanterna(){
-  if(!scanner) return;
   lanternaOn = !lanternaOn;
-  try{
-    scanner.applyVideoConstraints({ advanced: [{ torch: lanternaOn }] });
-    el('btnLanterna').className = 'btn btn-sm ' + (lanternaOn ? 'btn-hot' : 'btn-ghost');
-  }catch(e){
-    mostrarScanMsg('Este aparelho não deixa ligar a lanterna pelo navegador.', false);
-  }
+  aplicarNaCamera({ advanced: [{ torch: lanternaOn }] })
+    .then(() => { el('btnLanterna').className = 'btn btn-sm ' + (lanternaOn ? 'btn-hot' : 'btn-ghost'); })
+    .catch(() => {
+      lanternaOn = !lanternaOn;
+      mostrarScanMsg('Este aparelho não deixa ligar a lanterna pelo navegador.', false);
+    });
 }
 
-// câmera nativa: funciona em qualquer navegador e usa o zoom bom do aparelho
-function fotoEscolhida(ev){
+// câmera nativa: funciona em qualquer navegador e usa o zoom bom do aparelho.
+// Tenta primeiro o leitor do aparelho, que também é melhor em foto.
+async function fotoEscolhida(ev){
   const arquivo = ev.target.files && ev.target.files[0];
   ev.target.value = '';
-  if(!arquivo || typeof Html5Qrcode === 'undefined') return;
+  if(!arquivo) return;
   mostrarScanMsg('Lendo a foto…', true);
+
+  if(temDetectorNativo()){
+    try{
+      const suportados = await BarcodeDetector.getSupportedFormats();
+      const formats = FORMATOS_DESEJADOS.filter(f => suportados.indexOf(f) >= 0);
+      const det = new BarcodeDetector(formats.length ? { formats } : undefined);
+      const bitmap = await createImageBitmap(arquivo);
+      const achados = await det.detect(bitmap);
+      try{ bitmap.close(); }catch(e){}
+      if(achados && achados.length){
+        processarCodigo(String(achados[0].rawValue || '').trim(), false);
+        return;
+      }
+    }catch(e){
+      // cai no leitor de reserva
+    }
+  }
+
+  if(typeof Html5Qrcode === 'undefined'){
+    mostrarScanMsg('Não achei código nessa foto. Encha a tela com a etiqueta, sem reflexo.', false);
+    return;
+  }
   const lf = new Html5Qrcode('leitorFoto', {
     formatsToSupport: formatosLeitura(),
     experimentalFeatures: { useBarCodeDetectorIfSupported: true },
@@ -1817,9 +2063,13 @@ function fecharScanner(){
   el('zoomBox').style.display = 'none';
   el('btnLanterna').style.display = 'none';
   lanternaOn = false;
+  temZoom = false;
+  pararLeitorNativo();
   if(scanner){
-    scanner.stop().then(() => { scanner.clear(); scanner = null; }).catch(() => { scanner = null; });
+    scanner.stop().then(() => { try{ scanner.clear(); }catch(e){} scanner = null; }).catch(() => { scanner = null; });
   }
+  modoLeitura = '';
+  mostrarModoLeitura();
 }
 
 function processarManual(){
@@ -2007,12 +2257,14 @@ function resetAll(){
 function limparCabecalho(){
   ['producao','cliente','projeto','localGravacao','responsavel','respRetorno',
    'horaSaida','dataEntrada','horaEntrada','rentRespRetirada','rentDataRetirada',
-   'rentHoraRetirada','rentRespEntrega','rentDataEntrega','rentHoraEntrega'].forEach(id => {
+   'rentHoraRetirada','rentRespEntrega','rentDataEntrega','rentHoraEntrega',
+   'agendaId','agendaTitulo','agendaInicio'].forEach(id => {
     const campo = el(id);
     if(campo) campo.value = '';
   });
   const ds = el('dataSaida');
   if(ds) ds.value = todayISO();
+  renderAgenda();
 }
 
 /* ============================================================
@@ -2118,8 +2370,13 @@ function renderResumo(){
   const linha = (k, v) => '<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line-soft)">' +
     '<span class="eyebrow">' + k + '</span><span style="font-size:12.5px;text-align:right">' + v + '</span></div>';
   const valor = id => { const c = el(id); return c && c.value.trim() ? escapeHtml(c.value.trim()) : '—'; };
+  const agenda = el('agendaTitulo') ? el('agendaTitulo').value.trim() : '';
+  const agendaQuando = el('agendaInicio') ? el('agendaInicio').value.trim() : '';
   el('dashResumo').innerHTML =
     '<div class="sess-code" style="font-size:22px;margin-bottom:14px">' + escapeHtml(saidaId || '——————') + '</div>' +
+    linha('Gravação', agenda
+      ? escapeHtml(agenda) + (agendaQuando ? '<br><span class="sub">' + escapeHtml(fmtQuando(agendaQuando)) + '</span>' : '')
+      : '<span style="color:var(--ink-3)">não vinculada</span>') +
     linha('Projeto', valor('projeto')) +
     linha('Cliente', valor('cliente')) +
     linha('Responsável', valor('responsavel')) +
@@ -2134,7 +2391,7 @@ function renderResumo(){
 /* ============================================================
    12. PDF
    ============================================================ */
-async function salvarElementoComoPDF(node, filename){
+async function montarPDF(node){
   const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
   const imgData = canvas.toDataURL('image/jpeg', 0.95);
   const { jsPDF } = window.jspdf;
@@ -2154,40 +2411,70 @@ async function salvarElementoComoPDF(node, filename){
     pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
   }
+  return pdf;
+}
+
+async function salvarElementoComoPDF(node, filename){
+  const pdf = await montarPDF(node);
   pdf.save(filename);
 }
 
-async function gerarPDF(){
-  const producao    = el('producao').value.trim();
-  const cliente     = el('cliente').value.trim();
-  const projeto     = el('projeto').value.trim();
-  const local       = el('localGravacao').value.trim();
-  const responsavel = el('responsavel').value.trim();
-  const respRetorno = el('respRetorno').value.trim();
-  const dataSaida   = el('dataSaida').value;
-  const horaSaida   = el('horaSaida').value;
-  const dataEntrada = el('dataEntrada').value;
-  const horaEntrada = el('horaEntrada').value;
+// só o base64, sem o "data:application/pdf;base64," na frente — é o que o Apps Script anexa
+async function pdfEmBase64(node){
+  const pdf = await montarPDF(node);
+  const uri = pdf.output('datauristring');
+  return uri.slice(uri.indexOf(',') + 1);
+}
 
-  if(!projeto || !responsavel || !dataSaida){
-    toast('Preencha ao menos Projeto, Responsável pela retirada e Data de saída.', 'err');
-    go('saida');
-    return;
-  }
-  if(items.length === 0 && rented.length === 0){
-    toast('Adicione ao menos um equipamento (próprio ou alugado).', 'err');
-    go('saida');
-    return;
-  }
+/* ------------------------------------------------------------
+   O termo é montado a partir de um objeto, não da tela. É isso
+   que deixa o histórico regerar o mesmo documento de uma saída
+   antiga, com o layout idêntico.
+   ------------------------------------------------------------ */
+const CAMPOS_TERMO = ['producao','cliente','projeto','localGravacao','responsavel','respRetorno',
+  'dataSaida','horaSaida','dataEntrada','horaEntrada','agendaTitulo','agendaInicio',
+  'rentRespRetirada','rentDataRetirada','rentHoraRetirada',
+  'rentRespEntrega','rentDataEntrega','rentHoraEntrega'];
 
-  el('pdfProducao').textContent    = producao || '—';
-  el('pdfCliente').textContent     = cliente || '—';
-  el('pdfProjeto').textContent     = projeto;
-  el('pdfLocal').textContent       = local || '—';
-  el('pdfDataSaida').textContent   = formatDate(dataSaida) + (horaSaida ? ' às ' + horaSaida : '');
-  el('pdfDataEntrada').textContent = dataEntrada ? (formatDate(dataEntrada) + (horaEntrada ? ' às ' + horaEntrada : '')) : '—';
-  el('pdfSigNome').textContent     = responsavel;
-  el('pdfSigNomeRetorno').textContent = respRetorno || '—';
+function montarDados(pegar, listaItems, listaRented){
+  const d = { items: listaItems || [], rented: listaRented || [] };
+  CAMPOS_TERMO.forEach(k => { d[k] = String(pegar(k) == null ? '' : pegar(k)).trim(); });
+  return d;
+}
+const dadosDaTela  = () => montarDados(id => (el(id) ? el(id).value : ''), items, rented);
+const dadosDaSaida = s  => montarDados(k => ((s && s.campos) || {})[k], s && s.items, s && s.rented);
+
+function validarTermo(d){
+  if(!d.projeto || !d.responsavel || !d.dataSaida)
+    return 'Preencha ao menos Projeto, Responsável pela retirada e Data de saída.';
+  if(!d.items.length && !d.rented.length)
+    return 'Adicione ao menos um equipamento (próprio ou alugado).';
+  return '';
+}
+
+function nomeDoTermo(d){
+  const slug = (d.projeto || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  return 'controle-equipamentos-' + (slug || 'saida') + '-' + (d.dataSaida || todayISO()) + '.pdf';
+}
+
+function preencherTermo(d){
+  el('pdfProducao').textContent    = d.producao || '—';
+  el('pdfCliente').textContent     = d.cliente || '—';
+  el('pdfProjeto').textContent     = d.projeto || '—';
+  el('pdfLocal').textContent       = d.localGravacao || '—';
+  el('pdfDataSaida').textContent   = (d.dataSaida ? formatDate(d.dataSaida) : '—') + (d.horaSaida ? ' às ' + d.horaSaida : '');
+  el('pdfDataEntrada').textContent = d.dataEntrada ? (formatDate(d.dataEntrada) + (d.horaEntrada ? ' às ' + d.horaEntrada : '')) : '—';
+  el('pdfSigNome').textContent     = d.responsavel || '—';
+  el('pdfSigNomeRetorno').textContent = d.respRetorno || '—';
+
+  // linha da agenda: só aparece no documento quando a saída está vinculada a uma gravação
+  const linhaAgenda = el('pdfAgenda');
+  if(d.agendaTitulo){
+    linhaAgenda.style.display = '';
+    el('pdfAgendaTexto').textContent = d.agendaTitulo + (d.agendaInicio ? ' · ' + fmtQuando(d.agendaInicio) : '');
+  } else {
+    linhaAgenda.style.display = 'none';
+  }
 
   const now = new Date();
   el('pdfGeradoEm').textContent = 'Gerado em ' + String(now.getDate()).padStart(2,'0') + '/' +
@@ -2197,38 +2484,42 @@ async function gerarPDF(){
   // cada linha ganha dois quadradinhos para marcar X no papel (saída / entrada)
   const chk = '<td class="chk-cell"><span class="chk"></span></td><td class="chk-cell"><span class="chk"></span></td>';
 
-  el('pdfItemsBody').innerHTML = items.map(it =>
+  el('pdfItemsBody').innerHTML = d.items.map(it =>
     '<tr><td>' + escapeHtml(it.nome) + '</td><td>' + escapeHtml(it.serie) + '</td>' +
-    '<td>' + it.qtd + '</td><td>' + escapeHtml(it.estado) + '</td>' + chk + '</tr>').join('');
+    '<td>' + (it.qtd || 1) + '</td><td>' + escapeHtml(it.estado) + '</td>' + chk + '</tr>').join('');
 
-  const rentedSection = el('pdfRentedSection');
-  if(rented.length > 0){
-    const rr  = el('rentRespRetirada').value.trim();
-    const rdr = el('rentDataRetirada').value;
-    const rhr = el('rentHoraRetirada').value;
-    const re  = el('rentRespEntrega').value.trim();
-    const rde = el('rentDataEntrega').value;
-    const rhe = el('rentHoraEntrega').value;
-    el('pdfRentRespRetirada').textContent = rr || '—';
-    el('pdfRentRetirada').textContent = rdr ? (formatDate(rdr) + (rhr ? ' às ' + rhr : '')) : (rhr ? 'às ' + rhr : '—');
-    el('pdfRentRespEntrega').textContent = re || '—';
-    el('pdfRentEntrega').textContent = rde ? (formatDate(rde) + (rhe ? ' às ' + rhe : '')) : (rhe ? 'às ' + rhe : '—');
+  if(d.rented.length > 0){
+    el('pdfRentRespRetirada').textContent = d.rentRespRetirada || '—';
+    el('pdfRentRetirada').textContent = d.rentDataRetirada
+      ? (formatDate(d.rentDataRetirada) + (d.rentHoraRetirada ? ' às ' + d.rentHoraRetirada : ''))
+      : (d.rentHoraRetirada ? 'às ' + d.rentHoraRetirada : '—');
+    el('pdfRentRespEntrega').textContent = d.rentRespEntrega || '—';
+    el('pdfRentEntrega').textContent = d.rentDataEntrega
+      ? (formatDate(d.rentDataEntrega) + (d.rentHoraEntrega ? ' às ' + d.rentHoraEntrega : ''))
+      : (d.rentHoraEntrega ? 'às ' + d.rentHoraEntrega : '—');
 
-    el('pdfRentedBody').innerHTML = rented.map(it =>
+    el('pdfRentedBody').innerHTML = d.rented.map(it =>
       '<tr><td>' + escapeHtml(it.locadora) + '</td><td>' + escapeHtml(it.nome) + '</td>' +
       '<td>' + escapeHtml(it.serie) + '</td><td>' + escapeHtml(it.estado) + '</td>' + chk + '</tr>').join('');
-    rentedSection.style.display = '';
+    el('pdfRentedSection').style.display = '';
   } else {
     el('pdfRentedBody').innerHTML = '';
-    rentedSection.style.display = 'none';
+    el('pdfRentedSection').style.display = 'none';
   }
+}
+
+async function gerarPDF(){
+  const d = dadosDaTela();
+  const erro = validarTermo(d);
+  if(erro){ toast(erro, 'err'); go('saida'); return; }
+
+  preencherTermo(d);
 
   const btn = el('pdfBtn');
   btn.textContent = 'Gerando…';
   btn.disabled = true;
   try{
-    const slug = projeto.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-    await salvarElementoComoPDF(el('pdf-root'), 'controle-equipamentos-' + (slug || 'saida') + '-' + dataSaida + '.pdf');
+    await salvarElementoComoPDF(el('pdf-root'), nomeDoTermo(d));
     toast('PDF gerado com sucesso.');
   }catch(err){
     console.error(err);
@@ -2626,6 +2917,8 @@ function aplicarSaida(s){
       if(campo && document.activeElement !== campo && campo.value !== campos[k]) campo.value = campos[k];
     });
 
+    renderAgenda();   // o vínculo com a gravação pode ter vindo de outro aparelho
+
     const antes = items.length;
     items  = Array.isArray(s.items)  ? s.items  : [];
     rented = Array.isArray(s.rented) ? s.rented : [];
@@ -2729,7 +3022,126 @@ function entrarEmSaida(){
 }
 
 /* ============================================================
-   15. HISTÓRICO
+   15. AGENDA (Google Agenda, lida pelo Apps Script)
+   O navegador não fala com o Google Agenda sozinho — quem lê é o
+   Apps Script, que já roda autenticado na conta da Whizz. O
+   vínculo viaja nos campos da saída, então sincroniza entre os
+   aparelhos e é gravado junto do histórico sem nada a mais.
+   ============================================================ */
+let agendaCache = [];
+
+// "12/08 às 09:00" — e só a data quando o evento é de dia inteiro
+function fmtQuando(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return String(iso || '');
+  const data = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+  const hora = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return hora === '00:00' ? data : data + ' às ' + hora;
+}
+
+function renderAgenda(){
+  const titulo = el('agendaTitulo').value.trim();
+  const inicio = el('agendaInicio').value.trim();
+  const box = el('agendaBox');
+  box.classList.toggle('on', !!titulo);
+  el('agendaLimpar').style.display = titulo ? '' : 'none';
+  el('agendaLabel').innerHTML = titulo
+    ? escapeHtml(titulo) + (inicio ? '<small>' + escapeHtml(fmtQuando(inicio)) + '</small>' : '')
+    : 'Nenhuma gravação vinculada';
+  renderResumo();
+}
+
+async function abrirAgenda(){
+  if(!urlValida(cloudURL)){
+    toast('Conecte a nuvem primeiro — a agenda vem pelo mesmo link.', 'err');
+    go('acervo');
+    return;
+  }
+  modal(
+    cabecalho('Gravações na agenda', 'Últimos 7 dias e próximos 30. Escolha o compromisso desta saída.') +
+    '<div class="modal-b"><div id="agendaLista"><div class="empty">Carregando a agenda…</div></div></div>' +
+    '<div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button></div>'
+  );
+
+  const dia = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+  try{
+    const r = await api('agenda', { de: dia(-7), ate: dia(30) });
+    if(!r || !r.ok) throw new Error(r && r.erro ? r.erro : 'resposta');
+    agendaCache = r.eventos || [];
+    renderListaAgenda();
+  }catch(e){
+    const alvo = el('agendaLista');
+    if(!alvo) return;   // a pessoa fechou o modal enquanto carregava
+    alvo.innerHTML = '<div class="empty"><div class="big">Não consegui ler a agenda</div>' +
+      (e.message === 'semAgenda'
+        ? 'O Apps Script ainda não tem a função da agenda publicada.'
+        : 'Verifique a conexão e se o Apps Script foi reimplantado depois da atualização.') + '</div>';
+  }
+}
+
+function renderListaAgenda(){
+  const alvo = el('agendaLista');
+  if(!alvo) return;
+  if(!agendaCache.length){
+    alvo.innerHTML = '<div class="empty"><div class="big">Nenhuma gravação no período</div>' +
+      'Não há compromissos na agenda entre 7 dias atrás e 30 dias à frente.</div>';
+    return;
+  }
+  const hoje = new Date().toDateString();
+  const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  alvo.innerHTML = '<div class="ag-lista">' + agendaCache.map((ev, i) => {
+    const d = new Date(ev.inicio);
+    const ehHoje = d.toDateString() === hoje;
+    const detalhe = [fmtQuando(ev.inicio), ev.local].filter(Boolean).join(' · ');
+    return '<button class="ag-item' + (ehHoje ? ' ag-hoje' : '') + '" onclick="escolherEvento(' + i + ')">' +
+      '<span class="ag-dia"><span class="d">' + (isNaN(d) ? '—' : String(d.getDate()).padStart(2,'0')) + '</span>' +
+      '<span class="m">' + (isNaN(d) ? '' : MES[d.getMonth()]) + '</span></span>' +
+      '<span class="ag-info"><span class="t">' + escapeHtml(ev.titulo || '(sem título)') + '</span>' +
+      '<span class="s">' + escapeHtml(detalhe) + '</span></span>' +
+    '</button>';
+  }).join('') + '</div>';
+}
+
+function escolherEvento(i){
+  const ev = agendaCache[i];
+  if(!ev) return;
+
+  el('agendaId').value     = ev.id || '';
+  el('agendaTitulo').value = ev.titulo || '';
+  el('agendaInicio').value = ev.inicio || '';
+  ['agendaId','agendaTitulo','agendaInicio'].forEach(emitirCampo);
+
+  // só preenche o que está vazio: nunca sobrescreve o que a pessoa já digitou
+  const preenchidos = [];
+  const preencher = (id, valor) => {
+    const campo = el(id);
+    if(!campo || !valor || campo.value.trim()) return;
+    campo.value = valor;
+    emitirCampo(id);
+    preenchidos.push(id);
+  };
+  preencher('projeto', ev.titulo);
+  preencher('localGravacao', ev.local);
+  if(ev.inicio && !isNaN(new Date(ev.inicio))){
+    const d = new Date(ev.inicio);
+    preencher('dataSaida', d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+
+  renderAgenda();
+  fecharModal();
+  toast(preenchidos.length
+    ? 'Gravação vinculada e ' + preenchidos.length + ' campo(s) preenchido(s).'
+    : 'Gravação vinculada à saída.');
+}
+
+function limparAgenda(){
+  ['agendaId','agendaTitulo','agendaInicio'].forEach(id => { el(id).value = ''; emitirCampo(id); });
+  renderAgenda();
+  toast('Gravação desvinculada.', 'info');
+}
+
+/* ============================================================
+   16. HISTÓRICO
    ============================================================ */
 async function carregarHistorico(){
   const alvo = el('tblHist');
@@ -2747,23 +3159,124 @@ async function carregarHistorico(){
       alvo.innerHTML = '<tbody><tr><td><div class="empty"><div class="big">Sem saídas registradas</div>O histórico aparece aqui depois da primeira saída fechada.</div></td></tr></tbody>';
       return;
     }
-    alvo.innerHTML = '<thead><tr><th>Código</th><th>Projeto</th><th>Cliente</th><th>Responsável</th><th style="text-align:center">Itens</th><th>Situação</th></tr></thead><tbody>' +
-      saidas.map(s =>
+    histCache = saidas;
+    alvo.innerHTML = '<thead><tr><th>Código</th><th>Projeto</th><th>Gravação na agenda</th><th>Responsável</th>' +
+      '<th style="text-align:center">Itens</th><th>Situação</th><th></th></tr></thead><tbody>' +
+      saidas.map((s, i) =>
         '<tr>' +
           '<td class="mono" style="color:var(--hot)">' + escapeHtml(s.id) + '</td>' +
-          '<td class="who">' + escapeHtml(s.projeto || s.producao || '—') + '</td>' +
-          '<td>' + escapeHtml(s.cliente || '—') + '</td>' +
+          '<td><div class="who">' + escapeHtml(s.projeto || s.producao || '—') + '</div>' +
+            '<div class="sub">' + escapeHtml(s.cliente || 'sem cliente') + '</div></td>' +
+          '<td>' + (s.agendaTitulo
+            ? '<div>' + escapeHtml(s.agendaTitulo) + '</div><div class="sub">' + escapeHtml(s.agendaInicio ? fmtQuando(s.agendaInicio) : '') + '</div>'
+            : '<span class="sub">não vinculada</span>') + '</td>' +
           '<td>' + escapeHtml(s.responsavel || '—') + '</td>' +
           '<td class="qty">' + s.itens + '</td>' +
           '<td><span class="tag ' + (s.status === 'fechada' ? 't-available' : 't-out') + '"><i></i>' + (s.status === 'fechada' ? 'Fechada' : 'Aberta') + '</span></td>' +
+          '<td style="text-align:right;white-space:nowrap">' +
+            '<button class="btn btn-ghost btn-sm" onclick="baixarTermoDoHistorico(' + i + ')">PDF</button> ' +
+            '<button class="btn btn-hot btn-sm" onclick="abrirEnvio(' + i + ')">Enviar</button>' +
+          '</td>' +
         '</tr>').join('') + '</tbody>';
   }catch(e){
     alvo.innerHTML = '<tbody><tr><td><div class="empty"><div class="big">Não consegui carregar</div>Verifique a conexão e tente de novo.</div></td></tr></tbody>';
   }
 }
 
+/* ---- rebuscar uma saída inteira para remontar o termo ---- */
+async function buscarSaidaCompleta(id){
+  const r = await api('saidaDetalhe', { id });
+  if(!r || !r.ok || !r.saida) throw new Error(r && r.erro ? r.erro : 'resposta');
+  return r.saida;
+}
+
+async function baixarTermoDoHistorico(i){
+  const linha = histCache[i];
+  if(!linha) return;
+  toast('Remontando o termo da saída ' + linha.id + '…', 'info');
+  try{
+    const d = dadosDaSaida(await buscarSaidaCompleta(linha.id));
+    preencherTermo(d);
+    await salvarElementoComoPDF(el('pdf-root'), nomeDoTermo(d));
+    toast('PDF da saída ' + linha.id + ' gerado.');
+  }catch(e){
+    toast(e.message === 'naoEncontrada'
+      ? 'Essa saída não está mais guardada na planilha.'
+      : 'Não consegui remontar o termo dessa saída.', 'err');
+  }
+}
+
+/* ---- enviar o termo por email, com o PDF anexado ---- */
+function emailPadrao(){
+  try{ return localStorage.getItem(EMAIL_KEY) || ''; }catch(e){ return ''; }
+}
+function salvarEmailPadrao(v){
+  try{ localStorage.setItem(EMAIL_KEY, v || ''); }catch(e){}
+  const campo = el('emailPadrao');
+  if(campo && campo.value !== v) campo.value = v || '';
+}
+function emailValido(v){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
+}
+
+function abrirEnvio(i){
+  const linha = histCache[i];
+  if(!linha) return;
+  const quem = linha.projeto || linha.producao || linha.id;
+  modal(
+    cabecalho('Enviar relatório por email', 'Saída ' + escapeHtml(linha.id) + ' · o PDF vai anexado com o mesmo layout de sempre.') +
+    '<div class="modal-b f">' +
+      '<div class="frow one"><div><label for="env-para">Para</label>' +
+        '<input id="env-para" type="email" value="' + escapeAttr(emailPadrao()) + '" placeholder="nome@empresa.com.br"></div></div>' +
+      '<div class="frow one"><div><label for="env-assunto">Assunto</label>' +
+        '<input id="env-assunto" value="' + escapeAttr('Termo de saída de equipamentos — ' + quem) + '"></div></div>' +
+      '<div class="frow one"><div><label for="env-msg">Mensagem</label>' +
+        '<textarea id="env-msg" placeholder="Opcional">Segue em anexo o termo de saída de equipamentos da Whizz Vídeo.</textarea></div></div>' +
+      '<label style="display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--ink-2);font-family:var(--f-body)">' +
+        '<input type="checkbox" id="env-padrao" style="width:auto;height:auto;margin:0" ' + (emailPadrao() ? 'checked' : '') + '> Guardar este endereço como padrão' +
+      '</label>' +
+    '</div>' +
+    '<div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>' +
+      '<button class="btn btn-hot" id="env-btn" onclick="confirmarEnvio(' + i + ')">Enviar</button></div>'
+  );
+}
+
+async function confirmarEnvio(i){
+  const linha = histCache[i];
+  if(!linha) return;
+  const para = el('env-para').value.trim();
+  if(!emailValido(para)){ toast('Confira o endereço de email.', 'err'); el('env-para').focus(); return; }
+  const assunto = el('env-assunto').value.trim() || ('Termo de saída — ' + linha.id);
+  const mensagem = el('env-msg').value.trim();
+  const guardar = el('env-padrao').checked;
+
+  const btn = el('env-btn');
+  btn.textContent = 'Enviando…';
+  btn.disabled = true;
+  try{
+    const d = dadosDaSaida(await buscarSaidaCompleta(linha.id));
+    preencherTermo(d);
+    const anexo = await pdfEmBase64(el('pdf-root'));
+    const r = await api('enviarRelatorio', {
+      para, assunto, mensagem,
+      nomeArquivo: nomeDoTermo(d),
+      pdf: anexo
+    });
+    if(!r || !r.ok) throw new Error(r && r.erro ? r.erro : 'resposta');
+    if(guardar) salvarEmailPadrao(para);
+    fecharModal();
+    toast('Relatório enviado para ' + para + '.');
+  }catch(e){
+    const btnAtual = el('env-btn');
+    if(btnAtual){ btnAtual.textContent = 'Enviar'; btnAtual.disabled = false; }
+    toast(e.message === 'cota'
+      ? 'A conta do Google atingiu o limite diário de emails.'
+      : 'Não consegui enviar agora. Verifique a conexão e tente de novo.', 'err');
+  }
+}
+
 /* ============================================================
-   16. MODAL GENÉRICO
+   17. MODAL GENÉRICO
    ============================================================ */
 const scrim = el('scrim');
 function fecharModal(){ scrim.classList.remove('on'); scrim.innerHTML = ''; }
@@ -2780,7 +3293,7 @@ function cabecalho(t, s){
 scrim.addEventListener('mousedown', e => { if(e.target === scrim) fecharModal(); });
 
 /* ============================================================
-   17. INICIALIZAÇÃO
+   18. INICIALIZAÇÃO
    ============================================================ */
 el('loginLogo').src  = LOGO;
 el('railLogo').src   = LOGO;
@@ -2789,7 +3302,9 @@ el('pdfInvLogo').src = LOGO;
 
 loadDB();
 loadCloudURL();
+el('emailPadrao').value = emailPadrao();
 el('dataSaida').value = todayISO();
+renderAgenda();
 el('itemNome').setAttribute('list', 'dbSuggest');
 el('itemNome').addEventListener('change', autofillFromDB);
 renderItems();
@@ -2815,8 +3330,11 @@ if(sParam){
 garantirSaida();
 renderResumo();
 
+// os campos da agenda entram aqui de propósito: assim o vínculo com a gravação
+// viaja no mesmo mecanismo, sincroniza entre aparelhos e é gravado com a saída
 ['producao','cliente','projeto','localGravacao','dataSaida','horaSaida',
- 'dataEntrada','horaEntrada','responsavel','respRetorno'].forEach(id => {
+ 'dataEntrada','horaEntrada','responsavel','respRetorno',
+ 'agendaId','agendaTitulo','agendaInicio'].forEach(id => {
   const campo = el(id);
   if(campo) campo.addEventListener('change', () => emitirCampo(id));
 });
